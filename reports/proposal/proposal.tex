@@ -15,11 +15,20 @@
 \section{Problem Statement}
 Self modifying code covers broad category of all types of code that are modified in some way, before running 
 on the target platform. This definition includes code that modifies machine code directly or modifies code during 
-runtime. 
+runtime. Often, this tecnique is employed for optimization purposes: code can 
+replace conditional branch statements with unconditional branch statements.
+Other times, patching dynamic library loads may be important. However, we are 
+intetrested in its security application which is primary to evade detection.
 
 
 
 \section{Motivation}
+Malware typically have some type of signature, usually discoverable through either static 
+or dynamic. By using self modifying code, it is possible for static analysis to be completely
+useless. While traditional malware authors have used packing to encrypt the payload of a virus,
+thus evading detection of the payload, the unpacker itself must be left exposed. 
+However, it is possible to even obsucure this unpacker part too. \cite{cai2007certified}.
+
 
 
 \bibliographystyle{plain}
