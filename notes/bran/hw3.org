@@ -1,0 +1,49 @@
+* Woah heading
+
+* ANEC
+
+* Question 1
+Looking at the DllMain in the Functions pane is 1000D02E.
+* Question 2
+Looking at the Import functions, we discover that the =gethostbyname= at
+0x100163CC at ordinal 52. This function
+appears in the WS2_32 library, which is from the Windows Socket Library.
+* Question 3
+Listing the cross references gives us 9 calls to =gethostbyname=.
+* Question 4
+Looking at the address 0x10001757, we find a call to =gethostbyname=. During
+the call, the an address is loaded onto the stack. This address is yet
+another pointer which points us to the =.data= section pointing the string:
+pics.practicalmalwareanalysis.com.
+
+* Question 5
+There are around 21 local variables for the function at 0x10001656. 
+** Another heading
+
+* Question 6
+There is one argument =arg_0= in this function. It looks like a pointer. 
+* Question 7
+There is a peculiar string ="\cmd.eve \C"= which when reverse searched comes
+at at address 0x100195B34,    
+
+* Question 8
+Doing some poking around the areas reveals several calls to library
+functions. =GetSystemDirectoryA= is one. A syscall to =strcat= is also
+called. It appears the system is trying to copy the path of the command
+prompt for some reason.
+* Question 9
+There is a global variable 0x1008E5C4 that is set initally. Jumping using
+cross referencing, we see that it is being set by the type of Operating
+System detected. This makes sense as certain Windows typically has cmd.exe
+which can be found on older Win98 machines.
+* Question 10
+If, in the functino, =robotwork= matches, the function continues to compare
+the string. 
+      
+* Question 11
+The =PSList= export seems to list all the processes within the current
+operating system. 
+* 
+* 
+* 
+* oaeu
