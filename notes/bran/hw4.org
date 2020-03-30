@@ -1,0 +1,42 @@
+
+
+
+* Homework 4 MARE
+** (Chapter 6 from Practical Malware Analysis
+
+
+
+* Lab 06-01
+
+** Question 1
+
+The main function calls in main is =InternetGetConnectedState=.
+If the host can connect to the internet, it calls an internal function
+=sub 0x40105F=, which proceeds to run this massive code construct.
+
+** Question 2
+This massive code construct at =sub 0x40105F= that seems to be a Microsoft
+Visual C++ runtime Library call based on the it's complexity and numerous
+internal functions. There are lots of dynamic memory calls related to
+=malloc= or =heaps=.  
+** Question 3
+Performing dynamic analysis shows that the program simply prints "Connected
+to internet" if the can and "Error 1.1 No Internet" depending on the outcome
+of =InternetGetConnectedState=. One might conclude then, the funcition at
+=sub 0x40105F= is something along the lines of a =printf= statement from the
+system library.
+
+* Lab 06-02
+** Question 1
+** Question 2
+** Question 3
+** Question 4
+** Question 5
+** Question 6
+* Lab 06-03
+** Question 1
+** Question 2
+** Question 3
+** Question 4
+** Question 5
+** Question 6
