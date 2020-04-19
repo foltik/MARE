@@ -1,0 +1,159 @@
+% Created 2020-04-04 Sat 15:38
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{fixltx2e}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{marvosym}
+\usepackage{wasysym}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\tolerance=1000
+\author{dj$_{\text{dvorak}}$}
+\date{\today}
+\title{hw4}
+\hypersetup{
+  pdfkeywords={},
+  pdfsubject={},
+  pdfcreator={Emacs 25.2.2 (Org mode 8.2.10)}}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\section{Homework 4 MARE}
+\label{sec-1}
+\subsection{(Chapter 6 from Practical Malware Analysis}
+\label{sec-1-1}
+
+
+
+\section{Lab 06-01}
+\label{sec-2}
+
+\subsection{Question 1}
+\label{sec-2-1}
+
+The main function calls in main is \texttt{InternetGetConnectedState}.
+If the host can connect to the internet, it calls an internal function
+\texttt{sub 0x40105F}, which proceeds to run this massive code construct.
+
+\subsection{Question 2}
+\label{sec-2-2}
+This massive code construct at \texttt{sub 0x40105F} that seems to be a Microsoft
+Visual C++ runtime Library call based on the it's complexity and numerous
+internal functions. There are lots of dynamic memory calls related to
+\texttt{malloc} or \texttt{heaps}.  
+\subsection{Question 3}
+\label{sec-2-3}
+Performing dynamic analysis shows that the program simply prints "Connected
+to internet" if the can and "Error 1.1 No Internet" depending on the outcome
+of \texttt{InternetGetConnectedState}. One might conclude then, the funcition at
+\texttt{sub 0x40105F} is something along the lines of a \texttt{printf} statement from the
+system library.
+
+\section{Lab 06-02}
+\label{sec-3}
+\subsection{Question 1}
+\label{sec-3-1}
+The first subroutine makes a call to check for internet connection.    
+\subsection{Question 2}
+\label{sec-3-2}
+In the subroutine located at \texttt{0x40117F}, we see a call to call to another
+subroutine from a seemingly static library, \texttt{\_stbuf} which seems to allocate
+some dynamic buffer. Then, there seems to be some file handling and file
+pointer parsing. Finally, the \texttt{\_frbuf} seems to free the dynamically
+allocated buffer.  Looks like an unlabeled \texttt{printf()} call again.
+\subsection{Question 3}
+\label{sec-3-3}
+The second call is pretty obvious. It tries to connect to an external URL,
+\texttt{practicalmalwareanalysis}, read 200h bytes and then parse it for some kind
+of command. Looks like it's parsing HTML code. There is a series of checks
+that checks for the string "<!--".  The argument is saved in register AL.
+\subsection{Question 4}
+\label{sec-3-4}
+A series of if conditionals are used.
+\subsection{Question 5}
+\label{sec-3-5}
+Looking at the imports, we see that there are strings like \texttt{InternetReadFile}
+and \texttt{Success Internet Connection}. There's also a URL pointed to the
+\texttt{practicalmalwareanalysis.com}. There's also a string for \texttt{Internet Explorer
+7.5}. We can probably check for any traffic to this URL with this browser. 
+\subsection{Question 6}
+\label{sec-3-6}
+Looks like the program tries to connect to the internet, connect get some
+HTML page. Parse a comment for a command and then sleep for a minute.
+\section{Lab 06-03}
+\label{sec-4}
+\subsection{Question 1}
+\label{sec-4-1}
+Compared to the function call from Lab 06-02, there is a new subroutine that
+plays with registers, \texttt{sub\_401130}. It tries to open a register of windowsversion and set
+the key to "malware" and the data to point to some file at \texttt{C:\textbackslash{}Temp\textbackslash{}cc.exe}.
+There is also a jump table which seems take a file and drop it into that
+specific directory. Seems highly suspicious.
+\subsection{Question 2}
+\label{sec-4-2}
+The new function takes a pointer to a string containing a filename. Also an
+argument, which is probably the command parsed from the HTML source from
+before.
+\subsection{Question 3}
+\label{sec-4-3}
+The construct is a jump table. Probably a switch. Can do things like create
+new directory, copy file, delete file, set registers or sleep or exit. 
+\begin{itemize}
+\item New dir
+\item Copy
+\item delete
+\item set regs
+\item sleep
+\item exit (error parsing)
+\end{itemize}
+\subsection{Question 4}
+\label{sec-4-4}
+This function can change register values. Sets the \texttt{malware} value in \texttt{CurrentVersion\textbackslash{}Run} to
+\texttt{C:\textbackslash{}Temp\textbackslash{}cc.exe}.
+\subsection{Question 5}
+\label{sec-4-5}
+Seems to open a link to \texttt{http://practicalmalwareanalysis.com/cc.htm} and also
+creates a file at \texttt{C:\textbackslash{}Temp\textbackslash{}cc.exe}. 
+\subsection{Question 6}
+\label{sec-4-6}
+Purpose seems to grab a file from the internet and copy it into to known
+location for future use. Allows persistence for backdoor commands.
+\section{Lab 06-04}
+\label{sec-5}
+\subsection{Compare the \texttt{main} method with that of 06-02, 06-03.}
+\label{sec-5-1}
+Well, this one seems to be built of 06-03 with a new loop mechanism. 
+
+\subsection{What new code has added to main()?}
+\label{sec-5-2}
+There is now a loop function for attempting to parse the command. This loop
+iterates 1440 times after the internet connection passes.   
+\subsection{How is this HTML parse function different from the previous labs?}
+\label{sec-5-3}
+This parse function is a little different in the user agent has a \%d. There
+is a call to print string which seems to be the loop iteration of the
+program prefixed with \texttt{pma}.
+\subsection{How long will the program run?}
+\label{sec-5-4}
+Runs for 1440 iterations with each iteration lasting a minute. This means the
+program runs for an entire day.
+\subsection{Network-based indicators?}
+\label{sec-5-5}
+Network based indicators is a repeated request to
+\texttt{http://practicalmalwareanalysis.com/cc.htm} using the \texttt{Internet Explorer
+7.5} client agent.
+\subsection{What is the purpose of this malware?}
+\label{sec-5-6}
+Perform realtime coordination of a potential botnet for a single day.
+% Emacs 25.2.2 (Org mode 8.2.10)
+\end{document}

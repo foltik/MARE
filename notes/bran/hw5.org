@@ -1,0 +1,50 @@
+* Lab 7 Analyzing Malicious Windows Programs
+
+
+* Lab 07-01
+** Achieving Persistence
+This file achieves persistence by creating a service called =MalService=. 
+** Mutex Purpose
+This program uses a mutex called =HGL345= to make sure their is only one
+instance of the original program running.
+** Good Host-based signature
+You can check for the creation of a process called =Malware Service= or the
+name of the strange mutex =HGL345=. The service is automatically tied to the
+binary's path and filename.
+** Good Network-based signature
+Any traffic to the site ~practicalmalwareanalysis.com~ with ~Internet
+Explorer 8.0~. 
+** Purpose
+Seems to be a DDOS attcker? 20 threads are spawned starting in the year 2100. 
+** Duration of Execution
+Seems each thread will sleep for =0xffffff= milliseconds. But the attacks do
+not stop otherwise.
+* Lab 07-02
+** Persistence
+It doesn't look like this program is persistent.      
+** Purpose
+The purpose seems to be open an ad with Internet Explorer, then exits. This
+software does so by using the OLE =CoCreateInstance= call which uses COM
+objects to open programs. The CLSID key is the key to opening IE. 
+
+=http://practicalmalwareanalysis.com/ad.html=.  
+** Duration of Execution
+Seems to run and then quits if anything fails (after the ad is opened).
+* Lab 07-03
+** How Does this Program Achieve Persistence
+The original exe file copies the dll file into a fake windows dll under the
+path of =C:\windows\system32\kerne132.dll= . Note the 1 instead of the l.
+** Two good host-based indicators
+Well, there is this string that says =THIS WILL DESTROY YOUR COMPUTERT=.
+Also, we see that mutex is created by the dll with the name =SADFHUHF=. An
+IP address is listed here 127.26.152.13 (seemingly changed for safety
+purposes). Additionally, it looks like it is listening for commands such as
+"exec", "sleep" and "q" from this external IP. 
+** The purpose
+The purpose is to inject their bogus .dll file into scan the possibly change
+any system calls to point to their bogus kerne132.dll ... This also runs some
+back door serivce which allows for the arbitrary execution of commands and
+processes! Looks deadly.            
+** How to remove this malware after Installation
+Well, the damage is pretty bad since it modifies all system files. Better to
+just restore a backup image! 

@@ -1,0 +1,98 @@
+% Created 2020-04-19 Sun 15:59
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{fixltx2e}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{marvosym}
+\usepackage{wasysym}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\tolerance=1000
+\author{dj$_{\text{dvorak}}$}
+\date{\today}
+\title{hw5}
+\hypersetup{
+  pdfkeywords={},
+  pdfsubject={},
+  pdfcreator={Emacs 25.2.2 (Org mode 8.2.10)}}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\section{Lab 7 Analyzing Malicious Windows Programs}
+\label{sec-1}
+
+
+\section{Lab 07-01}
+\label{sec-2}
+\subsection{Achieving Persistence}
+\label{sec-2-1}
+This file achieves persistence by creating a service called \texttt{MalService}. 
+\subsection{Mutex Purpose}
+\label{sec-2-2}
+This program uses a mutex called \texttt{HGL345} to make sure their is only one
+instance of the original program running.
+\subsection{Good Host-based signature}
+\label{sec-2-3}
+You can check for the creation of a process called \texttt{Malware Service} or the
+name of the strange mutex \texttt{HGL345}. The service is automatically tied to the
+binary's path and filename.
+\subsection{Good Network-based signature}
+\label{sec-2-4}
+Any traffic to the site \verb~practicalmalwareanalysis.com~ with \verb~Internet Explorer 8.0~. 
+\subsection{Purpose}
+\label{sec-2-5}
+Seems to be a DDOS attcker? 20 threads are spawned starting in the year 2100. 
+\subsection{Duration of Execution}
+\label{sec-2-6}
+Seems each thread will sleep for \texttt{0xffffff} milliseconds. But the attacks do
+not stop otherwise.
+\section{Lab 07-02}
+\label{sec-3}
+\subsection{Persistence}
+\label{sec-3-1}
+It doesn't look like this program is persistent.      
+\subsection{Purpose}
+\label{sec-3-2}
+The purpose seems to be open an ad with Internet Explorer, then exits. This
+software does so by using the OLE \texttt{CoCreateInstance} call which uses COM
+objects to open programs. The CLSID key is the key to opening IE. 
+
+\texttt{http://practicalmalwareanalysis.com/ad.html}.  
+\subsection{Duration of Execution}
+\label{sec-3-3}
+Seems to run and then quits if anything fails (after the ad is opened).
+\section{Lab 07-03}
+\label{sec-4}
+\subsection{How Does this Program Achieve Persistence}
+\label{sec-4-1}
+The original exe file copies the dll file into a fake windows dll under the
+path of \texttt{C:\textbackslash{}windows\textbackslash{}system32\textbackslash{}kerne132.dll} . Note the 1 instead of the l.
+\subsection{Two good host-based indicators}
+\label{sec-4-2}
+Well, there is this string that says \texttt{THIS WILL DESTROY YOUR COMPUTERT}.
+Also, we see that mutex is created by the dll with the name \texttt{SADFHUHF}. An
+IP address is listed here 127.26.152.13 (seemingly changed for safety
+purposes). Additionally, it looks like it is listening for commands such as
+"exec", "sleep" and "q" from this external IP. 
+\subsection{The purpose}
+\label{sec-4-3}
+The purpose is to inject their bogus .dll file into scan the possibly change
+any system calls to point to their bogus kerne132.dll \ldots{} This also runs some
+back door serivce which allows for the arbitrary execution of commands and
+processes! Looks deadly.            
+\subsection{How to remove this malware after Installation}
+\label{sec-4-4}
+Well, the damage is pretty bad since it modifies all system files. Better to
+just restore a backup image! 
+% Emacs 25.2.2 (Org mode 8.2.10)
+\end{document}
