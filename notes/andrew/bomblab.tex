@@ -1,0 +1,181 @@
+% Created 2020-04-23 Thu 03:16
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{grffile}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\author{Andrew Park}
+\date{\today}
+\title{}
+\hypersetup{
+ pdfauthor={Andrew Park},
+ pdftitle={},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 26.3 (Org mode 9.1.9)}, 
+ pdflang={English}}
+\begin{document}
+
+\tableofcontents
+
+\section{Homework}
+\label{sec:orgb3a89a2}
+\subsection{HW6}
+\label{sec:org78563ec}
+Done using Ghidra
+\subsubsection{Phase 1}
+\label{sec:orga4623fa}
+Phase 1 is simply a stirng comparison. By looking at the string, we can see the solution is \texttt{"Public speaking is very easy."}
+\begin{center}
+\includegraphics[width=.9\linewidth]{./phase1graph.png}
+\end{center}
+\subsubsection{Phase 2}
+\label{sec:org0fae86c}
+\begin{center}
+\includegraphics[width=.9\linewidth]{./phase2graph.png}
+\end{center}
+
+Taking a look at the phase shows that 6 numbers are read from the user. It can be seen the the first number must be a 1. Further down the program, there is a loop that iterates through the rest of the numbers.
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./phase2loop.png}
+\end{center}
+
+The segment that is looped checks if the next number is equal to its index+1, multiplied by the last index.
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./phase2cond.png}
+\end{center}
+
+This means our solution is \texttt{1 2 6 24 120 720}
+\subsubsection{Phase 3}
+\label{sec:orga0c8ffe}
+This phase is a simple 2 numbers with a character.
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./phase3init.png}
+\end{center}
+
+There is a jump table where the second number is compared with a required value, and loads an associated character to be compared.
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./phase3case.png}
+\end{center}
+
+Using the first case, we get the solution \texttt{0 q 777}
+\subsubsection{Phase 4}
+\label{sec:org00f0c3b}
+The phase reads 1 number which must be greater than 0. This number is then passed into a function, and explodes if the returned value is not 55
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./phase4graph.png}
+\end{center}
+
+The function can be described as:
+
+\begin{verbatim}
+def func4(int n):
+    if n<=1:
+	return 1
+    else:
+	return func4(n-1) + func4(n-2)
+\end{verbatim}
+
+func4 is clearly the fibonacci numbers.
+
+Thus, the solution to this phase is \texttt{9}
+\subsubsection{Phase 5}
+\label{sec:org490b1c2}
+This phase takes in a string input of length 6
+
+This string is then translated using a table and then compared with the string \texttt{"giants"}
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./phase5graph.png}
+\end{center}
+
+The function takes the lower 4 bits of each character, indexing it with the said table to get the resulting character.
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./phase5table.png}
+\end{center}
+
+Using the table, we can find the required byte sequences to produce \texttt{"giants"}. The sequence is \texttt{1111, 0000 0101, 1011, 1101, 0001}. We can then use the byte sequence to generate a valid solution.
+
+One possible solution is \texttt{"OPEKMA"}
+\subsubsection{Phase 6}
+\label{sec:org6d4ee93}
+Phase 6 starts by reading in 6 numbers.
+
+The function then checks to make sure all 6 numbers are < 7
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./phase6checkinit.png}
+\end{center}
+
+It then checks to make sure all 6 numbers are unique
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./phase6unique.png}
+\end{center}
+
+We see that there are structures in the data segment of the program. 
+
+Following the memory address, we find 6 nodes in data. Setting their data types as nodeStruct allows us to view their contents.
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./phase6nodes.png}
+\end{center}
+
+Inspecting these values, we see that it is a linked list. Sorting them in decreasing order yields the solution \texttt{4 2 6 3 1 5}
+
+This marks the end of the 6 phases of Bomb Lab. However, there is another phase that we can reach which is hidden unless we look at the underlying code
+
+\subsubsection{Secret Phase}
+\label{sec:org70d3b14}
+To get to the secret phase, we must first look at the function \texttt{phase\_defused}. 
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./phasedefused.png}
+\end{center}
+
+Inside \texttt{phase\_defused}, we see that there is a call to \texttt{secret\_phase}, though it can not normally be reached. To reach it, we must append a string to the end of the solution of phase 4. Taking a look at the string, we can append \texttt{"austinpowers"} to the end of the solution of phase 4 to reach this secret phase
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./secretphase.png}
+\end{center}
+
+Taking a look at the secret phase, we see that initially it checks if the input is less than or equal to 1001.
+
+Afterwards, there is a function call \texttt{fun7}, which is then compared and explodes if the value is not 7.
+
+A pointer to segments in data can be found in the initial call to \texttt{fun7}. 
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./secretdata.png}
+\end{center}
+
+Taking a look at the data, we can clearly see a binary tree.
+
+If the passed node is zero, the function returns -1. If the node's value is less than the input, it returns double the result of recursing the left child, and the same input. Otherwise, it returns twice the result+1 of recursing the right child, and the same input
+
+To solve this, a path must be found where the resultant is 7
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./fun7.png}
+\end{center}
+
+Tracing the call structure, we find the solution \texttt{1001}, which defuses the secret phase.
+
+This marks the end of Bomb Lab
+\end{document}

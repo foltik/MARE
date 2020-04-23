@@ -1,0 +1,109 @@
+* Homework
+** HW6
+Done using Ghidra
+*** Phase 1
+Phase 1 is simply a stirng comparison. By looking at the string, we can see the solution is ="Public speaking is very easy."=
+[[./phase1graph.png]]
+*** Phase 2
+[[./phase2graph.png]]
+
+Taking a look at the phase shows that 6 numbers are read from the user. It can be seen the the first number must be a 1. Further down the program, there is a loop that iterates through the rest of the numbers.
+
+[[./phase2loop.png]]
+
+The segment that is looped checks if the next number is equal to its index+1, multiplied by the last index.
+
+[[./phase2cond.png]]
+
+This means our solution is =1 2 6 24 120 720=
+*** Phase 3
+This phase is a simple 2 numbers with a character.
+
+[[./phase3init.png]]
+
+There is a jump table where the second number is compared with a required value, and loads an associated character to be compared.
+
+[[./phase3case.png]]
+
+Using the first case, we get the solution =0 q 777=
+*** Phase 4
+The phase reads 1 number which must be greater than 0. This number is then passed into a function, and explodes if the returned value is not 55
+
+[[./phase4graph.png]]
+
+The function can be described as:
+
+#+BEGIN_SRC python
+    def func4(int n):
+        if n<=1:
+            return 1
+        else:
+            return func4(n-1) + func4(n-2)
+#+END_SRC
+
+func4 is clearly the fibonacci numbers.
+
+Thus, the solution to this phase is =9=
+*** Phase 5
+This phase takes in a string input of length 6
+
+This string is then translated using a table and then compared with the string ="giants"=
+
+[[./phase5graph.png]]
+
+The function takes the lower 4 bits of each character, indexing it with the said table to get the resulting character.
+
+[[./phase5table.png]]
+
+Using the table, we can find the required byte sequences to produce ="giants"=. The sequence is =1111, 0000 0101, 1011, 1101, 0001=. We can then use the byte sequence to generate a valid solution.
+
+One possible solution is ="OPEKMA"=
+*** Phase 6
+Phase 6 starts by reading in 6 numbers.
+
+The function then checks to make sure all 6 numbers are < 7
+
+[[./phase6checkinit.png]]
+
+It then checks to make sure all 6 numbers are unique
+
+[[./phase6unique.png]]
+
+We see that there are structures in the data segment of the program. 
+
+Following the memory address, we find 6 nodes in data. Setting their data types as nodeStruct allows us to view their contents.
+
+[[./phase6nodes.png]]
+
+Inspecting these values, we see that it is a linked list. Sorting them in decreasing order yields the solution =4 2 6 3 1 5=
+
+This marks the end of the 6 phases of Bomb Lab. However, there is another phase that we can reach which is hidden unless we look at the underlying code
+
+*** Secret Phase
+To get to the secret phase, we must first look at the function =phase_defused=. 
+
+[[./phasedefused.png]]
+
+Inside =phase_defused=, we see that there is a call to =secret_phase=, though it can not normally be reached. To reach it, we must append a string to the end of the solution of phase 4. Taking a look at the string, we can append ="austinpowers"= to the end of the solution of phase 4 to reach this secret phase
+
+[[./secretphase.png]]
+
+Taking a look at the secret phase, we see that initially it checks if the input is less than or equal to 1001.
+
+Afterwards, there is a function call =fun7=, which is then compared and explodes if the value is not 7.
+
+A pointer to segments in data can be found in the initial call to =fun7=. 
+
+[[./secretdata.png]]
+
+Taking a look at the data, we can clearly see a binary tree.
+
+If the passed node is zero, the function returns -1. If the node's value is less than the input, it returns double the result of recursing the left child, and the same input. Otherwise, it returns twice the result+1 of recursing the right child, and the same input
+
+To solve this, a path must be found where the resultant is 7
+
+[[./fun7.png]]
+
+Tracing the call structure, we find the solution =1001=, which defuses the secret phase.
+
+This marks the end of Bomb Lab
