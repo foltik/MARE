@@ -1,4 +1,4 @@
-% Created 2020-04-26 Sun 15:39
+% Created 2020-04-26 Sun 16:37
 % Intended LaTeX compiler: pdflatex
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
@@ -29,14 +29,15 @@
 \tableofcontents
 
 \section{Homework}
-\label{sec:org92d9779}
+\label{sec:orgcb2a029}
 \subsection{HW7}
-\label{sec:org32b18c6}
+\label{sec:org6be643e}
 \subsubsection{Lab 9-1}
-\label{sec:org2dcdea6}
+\label{sec:org929cb56}
 \begin{enumerate}
 \item Question 1
-\label{sec:org7d58fe6}
+\label{sec:orgf982016}
+
 To get the malware to install, we need to reach \texttt{0x00402600}. Within this function, there are function calls to \texttt{OpenSCManagerA}, \texttt{ChangeServiceConfigA}, \texttt{CreateServiceA}, \texttt{CopyFileA}, and registry modifications. 
 
 To get to the install function, we would need to run this malware with 3 arguments. We need a password as one of these arguments along with \texttt{"-in"} as the first argument. To decipher this password, we can take a look at \texttt{0x00402510}. The password must be 4 characters long. After analyzing the funciton, we see that the passcode is \texttt{"abcd"}. 
@@ -48,8 +49,10 @@ To get to the install function, we would need to run this malware with 3 argumen
 We can also patch \texttt{0x00402B38} by changing \texttt{jnz} to \texttt{jz} to bypass any password check.
 
 We can install the malware by executing it with the arguments \texttt{"Lab09-01.exe -in abcd"}.
+
 \item Question 2
-\label{sec:org870bbe6}
+\label{sec:org6967eaa}
+
 There are 4 command-line options for the program.
 
 \begin{enumerate}
@@ -67,8 +70,10 @@ There are 4 command-line options for the program.
 \end{center}
 
 Analyzing the function, we can find what the password to the installer, \texttt{"abcd"}.
+
 \item Question 3
-\label{sec:org902073d}
+\label{sec:orgcbdc229}
+
 To Patch the program so that it doesnt require a password, we need to patch 0x00402B38 from \texttt{jnz} to \texttt{jz}. 
 
 \begin{center}
@@ -78,7 +83,7 @@ To Patch the program so that it doesnt require a password, we need to patch 0x00
 Changing \texttt{75} to \texttt{74} will change the instruction from \texttt{jnz} to \texttt{jz}.
 
 \item Question 4
-\label{sec:org4c14715}
+\label{sec:orgd7ecc0d}
 \begin{center}
 \includegraphics[width=.9\linewidth]{./lab91d1.png}
 \end{center}
@@ -90,11 +95,14 @@ One possible way of detecting the malware is by checking if any registry values 
 \end{center}
 
 We can check for these registry keys as a way of detecting whether a computer has been infected or not
+
 \item Question 5
-\label{sec:org4e64f8a}
+\label{sec:org31be35a}
+
 \begin{center}
 \includegraphics[width=.9\linewidth]{./lab91e.png}
 \end{center}
+
 Taking a look at 0x00402020, we can see that there are multiple different tasks the malware does
 
 \begin{enumerate}
@@ -108,13 +116,82 @@ Taking a look at 0x00402020, we can see that there are multiple different tasks 
 
 \item Do nothing
 \end{enumerate}
+
 \item Question 6
-\label{sec:orgad483d7}
+\label{sec:org7f05ef4}
+
 \begin{center}
 \includegraphics[width=.9\linewidth]{./lab91f.png}
 \end{center}
+
 We can see in the strings, there is a website stored in the program, \texttt{"http://www.practicalmalwareanalysis.com"}. Using wireshark, we see that the malware is trying to receive commands from the website
 \end{enumerate}
 \subsubsection{Lab 9-2}
-\label{sec:org380ae6f}
+\label{sec:org3d783f7}
+\begin{enumerate}
+\item Question 1
+\label{sec:org6b315d5}
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./lab92a.png}
+\end{center}
+\begin{center}
+\includegraphics[width=.9\linewidth]{./lab92b.png}
+\end{center}
+
+\item Question 2
+\label{sec:orgf30365c}
+
+The malware terminates immediately
+
+\item Question 3
+\label{sec:org7a877cd}
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./lab92c.png}
+\end{center}
+Analyzing the function above, we can see te binary obtains the name of its executable using \texttt{GetModuleFileNameA}. It strips this path and then compares the filename to ocl.exe. If these don't match, the malware will terminate.
+
+\item Question 4
+\label{sec:org2c2d09d}
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./lab92d.png}
+\end{center}
+We see that a string is being formed character by character. The string ends up becoming \texttt{"1qaz2wsx3edc"}. This was done to prevent disassemblers from detecting it as a proper string through static analysis.
+
+\item Question 5
+\label{sec:orgbc2a04c}
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./lab92e.png}
+\end{center}
+
+We see that a string is being passed. When we use dynamic analysis on the program, we see that the string that was created above was passed into the subroutine. The pointer \texttt{0x0012FD90} is also passed in
+
+\item Question 6
+\label{sec:org6d41b3c}
+
+\texttt{http://www.practicalmalwareanalysis.com}
+
+\item Question 7
+\label{sec:org45aec4c}
+
+The malware uses XOR to obfuscate the domain name
+
+\item Question 8
+\label{sec:orge2c1110}
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./lab92f.png}
+\end{center}
+
+The first block decodes the comain name and gets the ip by using \texttt{gethostbyname}. It then tried to connect to the ip at port 9999. Then the socket is passed into the \texttt{0x00401000}.
+
+\begin{center}
+\includegraphics[width=.9\linewidth]{./lab92g.png}
+\end{center}
+
+The program then redirects all input and output over console is transmitted over the network. This practically creates a reverse shell to receive commands from the server.
+\end{enumerate}
 \end{document}
