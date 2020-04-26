@@ -1,0 +1,79 @@
+* Homework
+** HW7
+*** Lab 9-1
+**** Question 1
+To get the malware to install, we need to reach =0x00402600=. Within this function, there are function calls to =OpenSCManagerA=, =ChangeServiceConfigA=, =CreateServiceA=, =CopyFileA=, and registry modifications. 
+
+To get to the install function, we would need to run this malware with 3 arguments. We need a password as one of these arguments along with ="-in"= as the first argument. To decipher this password, we can take a look at =0x00402510=. The password must be 4 characters long. After analyzing the funciton, we see that the passcode is ="abcd"=. 
+
+[[./lab91a.png]]
+
+We can also patch =0x00402B38= by changing =jnz= to =jz= to bypass any password check.
+
+We can install the malware by executing it with the arguments ="Lab09-01.exe -in abcd"=.
+**** Question 2
+There are 4 command-line options for the program.
+
+1. ="-in"=: installs
+
+2. ="-re"=: uninstalls
+
+3. ="-cc"=: prints our registry
+
+4. ="-c"=: sets registry value
+
+[[./lab91b.png]]
+
+Analyzing the function, we can find what the password to the installer, ="abcd"=.
+**** Question 3
+To Patch the program so that it doesnt require a password, we need to patch 0x00402B38 from =jnz= to =jz=. 
+
+[[./lab91c.png]]
+
+Changing =75= to =74= will change the instruction from =jnz= to =jz=.
+
+**** Question 4
+[[./lab91d1.png]]
+
+One possible way of detecting the malware is by checking if any registry values were added. These registry keys are added to create persistance.
+
+[[./lab91d2.png]]
+
+We can check for these registry keys as a way of detecting whether a computer has been infected or not
+**** Question 5
+[[./lab91e.png]]
+Taking a look at 0x00402020, we can see that there are multiple different tasks the malware does
+
+1. Sleep
+
+2. Upload
+
+3. Download
+
+4. Execute
+
+5. Do nothing
+**** Question 6
+[[./lab91f.png]]
+We can see in the strings, there is a website stored in the program, ="http://www.practicalmalwareanalysis.com"=. Using wireshark, we see that the malware is trying to receive commands from the website
+*** Lab 9-2
+**** Question 1
+[[./lab92a.png]]
+[[./lab92b.png]]
+**** Question 2
+The malware terminates immediately
+**** Question 3
+[[./lab92c.png]]
+Analyzing the function above, we can see te binary obtains the name of its executable using =GetModuleFileNameA=. It strips this path and then compares the filename to ocl.exe. If these don't match, the malware will terminate.
+**** Question 4
+[[./lab92d.png]]
+We see that a string is being formed character by character. The string ends up becoming ="1qaz2wsx3edc"=. This was done to prevent disassemblers from detecting it as a proper string through static analysis.
+**** Question 5
+[[./lab92e.png]]
+We see that a string is being passed. When we use dynamic analysis on the program, we see that the string that was created above was passed into the subroutine. The pointer =0x0012FD90= is also passed in
+**** Question 6
+=http://www.practicalmalwareanalysis.com=
+**** Question 7
+The malware uses XOR to obfuscate the domain name
+**** Question 8
+
