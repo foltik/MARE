@@ -1,0 +1,123 @@
+% Created 2020-04-26 Sun 13:18
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{grffile}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\usepackage{minted}
+\author{dj\textsubscript{dvorak}}
+\date{\today}
+\title{MARE HW 6}
+\hypersetup{
+ pdfauthor={dj\textsubscript{dvorak}},
+ pdftitle={MARE HW 6},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 25.2.2 (Org mode 9.3.6)}, 
+ pdflang={English}}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+
+\section{Lab 9-1}
+\label{sec:org259ed1f}
+
+\subsection{How do you install?}
+\label{sec:org587a113}
+It seems to want an argument \texttt{-in "password"} which will install itself to the System32 folder. A
+A registry is created along with a service, presumably for persistence.
+
+\subsection{What are the command line arguments?}
+\label{sec:org07d934c}
+Well, the main file seems to include two arguments 
+
+It looks like there are two arguments in the main. It will check for the args
+\texttt{-re}, then \texttt{-in}. If the \texttt{-in} is passed, it also checks for \texttt{-c} and \texttt{-cc = flags.
+It turns out that =-in} will install, \texttt{-re} will uninstall and \texttt{-c} will pass in 4 arguments
+to update the configuratino and \texttt{-cc} will print the configuration. 
+
+\subsection{Can we patch to remove the password?}
+\label{sec:orgbff4e0c}
+
+Sure. Since we know where the desired the function is (\texttt{0x0000402b61}), we can modify the jump at 
+the beginning of the program to make it unconditional.
+
+\subsection{Host based-indicators}
+\label{sec:orgbe03220}
+Modifies the registers in \texttt{\textbackslash{}\textbackslash{}SOFTWARE\textbackslash{}Microsoft\textbackslash{}XPS}. 
+Also, a copy of itself in system32 folder
+\subsection{The Pontential Remote Actions}
+\label{sec:org87fe65a}
+Through the networked commands via HTTP requests, we can 
+
+\begin{itemize}
+\item Download
+\item Sleep
+\item Do nothing
+\item Upload
+\item Run CMD (shell scripts)
+\end{itemize}
+
+\subsection{Any useful network based signatures?}
+\label{sec:org8792afd}
+Well, it sends network requests to and from \texttt{https://practicalmalwareanalysis.com}. Uses GET request 
+with HTTP 1.0. Seems to ask for different strings each time though.
+
+\section{Lab 9-2}
+\label{sec:org3657677}
+
+\subsection{What strings do you statically see in the binary?}
+\label{sec:orgf42d778}
+The usual KERNEL32.dll, WSAsockets, Create and Terminate Processes. But also, unexpectedly
+we see some function calls to what appears to be getting and setting environmental variables.
+Nothing special.
+
+\subsection{Run the binary?}
+\label{sec:org2874018}
+
+I will not run the binary
+
+\subsection{How to run this malicious payload?}
+\label{sec:orgf00c4d6}
+
+The main exe takes a file argument and loads it through \texttt{GetModuleFileName}. 
+
+\subsection{Examining \texttt{0x000401133}}
+\label{sec:org144ae97}
+
+So this occurs near the beginning of the \texttt{main()} and it loads a bunch of what appears to be
+ASCII characters. It looks like \texttt{1qaz2wsx3edc\textbackslash{}0ocl.exe}. Later on,
+we realize this is two different strings: one for encoding and the other
+is simply the name of the url.  
+
+\subsection{Examining \texttt{0x00401089}}
+\label{sec:org924948a}
+Well, this seems to be a function call that takes two args, a char* and a integer. There is a 
+call to \texttt{strlen()} and then a loop that calls an xor function. Just guessing but it might be an
+encryption algorithm. Actually, the argument seems to be the array from \texttt{0x00401133}.
+
+\subsection{Domain name}
+\label{sec:orge505dcf}
+This name is \texttt{practicalmalwareanalysis.com}
+
+\subsection{What encoding routine is being used?}
+\label{sec:org9f85ec7}
+Probably a caesar shiftp with the XOR procedure.
+
+\subsection{On \texttt{CreateProcessA} at \texttt{0x0040106E}}
+\label{sec:org4b8170d}
+This calls a command prompt and allows the execution of arbitrary commands. It is probably connected 
+to the host domain name.
+\end{document}
