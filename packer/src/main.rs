@@ -1,7 +1,7 @@
 use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 use iced_x86::{
     BlockEncoder, BlockEncoderOptions, Code as C, Decoder, DecoderOptions, Formatter,
-    Instruction as I, InstructionBlock, IntelFormatter,
+    Instruction as I, InstructionBlock, IntelFormatter, Register as R
 };
 use std::borrow::Cow;
 use std::fs;
@@ -109,12 +109,7 @@ fn decode_subroutine(sub: &Sub, bytes: &[u8]) -> Vec<I> {
     decoder.into_iter().collect()
 }
 
-fn i_bytes<'a>(i: &I, bytes: &'a [u8]) -> &'a [u8] {
-    let (start, end) = (i.ip() as usize, i.ip() as usize + i.len());
-    &bytes[start..end]
-}
-
-fn format_instruction(i: &I, start: usize, bytes: &[u8]) -> String {
+fn format_instruction(i: &I, start: usize, bytes: &[u8], rel: bool) -> String {
     let mut formatter = IntelFormatter::new();
     let mut out = String::new();
 
@@ -123,7 +118,10 @@ fn format_instruction(i: &I, start: usize, bytes: &[u8]) -> String {
         i.ip(),
         i.ip() as usize - start
     ));
-    let bytes = i_bytes(i, bytes);
+
+    let ofs = if rel { start } else { 0 };
+    let (start, end) = (i.ip() as usize - ofs, i.ip() as usize + i.len() - ofs);
+    let bytes = &bytes[start..end];
     for b in bytes {
         out.push_str(&format!("{:02x} ", b));
     }
@@ -137,48 +135,6 @@ fn format_instruction(i: &I, start: usize, bytes: &[u8]) -> String {
     formatter.format(i, &mut out);
 
     out
-}
-
-fn nop_pad(i: &I, bytes: &[u8], len: usize, offset: u32) -> Vec<u8> {
-    let mut v = Vec::new();
-    let bytes = i_bytes(i, bytes);
-
-    if bytes[0] == 0xE8 || bytes[0] == 0xE9 {
-        let mut rd = Cursor::new(&bytes[1..]);
-        let o = rd.read_u32::<NativeEndian>().unwrap();
-        let fixed = o - offset - 0xFFB;
-        println!("Jump Offset: {} -> {} (-{})", o as i32, fixed as i32, offset);
-        v.push(bytes[0]);
-        v.write_u32::<NativeEndian>(fixed).unwrap();
-    } else {
-        v.extend_from_slice(bytes);
-    }
-
-    if v.len() < len {
-        for _ in 0..(len - v.len()) {
-            v.push(0x90);
-        }
-    }
-    v
-}
-
-fn imul_hide(instr: &[u8], key: u64) -> Vec<u8> {
-    let mut v = Vec::new();
-    v.push(0xEB); // jmp 4
-    v.push(0x02);
-    v.push(0x69); // imul eax, [rcx+rbp+...], ...
-    v.push(0x84);
-
-    v.extend_from_slice(instr);
-
-    v.push(0xEB); // jmp 10
-    v.push(0x0A);
-    v.push(0x69); // imul eax, [rcx+rbp+...], ...
-    v.push(0x84);
-
-    v.write_u64::<NativeEndian>(key).unwrap();
-
-    v
 }
 
 fn main() {
@@ -207,9 +163,10 @@ fn main() {
         "Packing subroutine {:?} <{}+{:08X}>",
         sub.name, target_name, sub.start
     );
-    let mut instrs = decode_subroutine(sub, &bytes);
-    for i in &instrs {
-        println!("  {}", format_instruction(&i, sub.start, &bytes));
+    let ins = decode_subroutine(sub, &bytes);
+    let len = ins.len() - 4;
+    for i in &ins {
+        println!("  {}", format_instruction(&i, sub.start, &bytes, false));
     }
     println!();
 
@@ -223,82 +180,55 @@ fn main() {
     );
     println!();
 
-    println!("Removing subroutine prologue and epilogue");
-    instrs.remove(0);
-    instrs.remove(0);
-    instrs.pop().unwrap();
-    instrs.pop().unwrap();
-    for i in &instrs {
-        println!("  {}", format_instruction(&i, sub.start, &bytes));
-    }
-    println!();
-
-    println!("Padding instructions to 8 bytes with NOPs");
-    let mut instrs_raw: Vec<_> = instrs.iter().map(|i| nop_pad(i, &bytes, 8, (cave as i64 - sub.start as i64) as u32)).collect();
-    instrs_raw.push(vec![0xE9, 0x02, 0x00, 0x00, 0x00, 0x90, 0x90, 0x90]);
-    for i in &instrs_raw {
-        print!("  ");
-        for b in i {
-            print!("{:02X} ", b);
+    // Encode new instructions starting at RIP of the cave
+    let mut ins_mod = Vec::new();
+    // Skip prologue and epilogue
+    for i in ins.iter().skip(2).take(len) {
+        ins_mod.push(I::with_declare_byte(&[0xEB, 0x02]));
+        ins_mod.push(I::with_declare_byte(&[0x69, 0x84]));
+        ins_mod.push(*i);
+        for _ in 0..(8 - i.len()) {
+            ins_mod.push(I::with(C::Nopd));
         }
-        println!();
+        ins_mod.push(I::with_declare_byte(&[0xEB, 0x0A]));
+        ins_mod.push(I::with_declare_byte(&[0x69, 0x84]));
+        ins_mod.push(I::with_declare_byte(&[0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90])); // key
+        ins_mod.push(I::with_reg(C::Push_r64, R::RCX));
+        ins_mod.push(I::with_declare_byte(&[0x48, 0x8B, 0x0D, 0xF0, 0xFF, 0xFF, 0xFF]));
+        ins_mod.push(I::with_declare_byte(&[0x48, 0x03, 0x0D, 0xDD, 0xFF, 0xFF, 0xFF]));
+        ins_mod.push(I::with_declare_byte(&[0x48, 0x89, 0x0D, 0x05, 0x00, 0x00, 0x00]));
+        ins_mod.push(I::with_reg(C::Pop_r64, R::RCX));
+    }
+    ins_mod.push(I::with_declare_byte(&[0xEB, 0x02]));
+    ins_mod.push(I::with_declare_byte(&[0x69, 0x84]));
+    ins_mod.push(I::with_branch(C::Jmp_rel32_64, (sub.end - 2) as u64));
+    ins_mod.push(I::with_declare_byte(&[0x90, 0x90, 0x90]));
+
+    let block = InstructionBlock::new(&ins_mod, cave_offset);
+    let encoded = BlockEncoder::encode(64, block, BlockEncoderOptions::NONE).unwrap();
+    let mut code = encoded.code_buffer.clone();
+
+    println!("Patching offsets");
+    for k in 0..len {
+        let i = &code[47*k+4..47*k+12];
+        let j = &code[47*k+51..47*k+59];
+
+        let iu = Cursor::new(i).read_u64::<NativeEndian>().unwrap();
+        let ju = Cursor::new(j).read_u64::<NativeEndian>().unwrap();
+
+        let o = &mut code[47*k+16..47*k+24];
+        Cursor::new(o).write_u64::<NativeEndian>(ju.wrapping_sub(iu)).unwrap();
+
+        println!("{}: {:016X} -> {:016X} (+{:016X})", k, iu, ju, ju.wrapping_sub(iu));
     }
     println!();
 
-    println!("Coercing bytes to u64");
-    let instrs_u64: Vec<_> = instrs_raw
-        .iter()
-        .map(|v| Cursor::new(v).read_u64::<NativeEndian>().unwrap())
-        .collect();
-    for u in &instrs_u64 {
-        println!("  0x{:016X}", u);
-    }
-    println!();
-
-    println!("Calculating offsets");
-    let mut offsets: Vec<_> = instrs_u64
-        .iter()
-        .zip(instrs_u64.iter().skip(1))
-        .map(|(u, next)| next.wrapping_sub(*u))
-        .collect();
-    offsets.push(0);
-    for o in &offsets {
-        println!("  0x{:016X}", o);
-    }
-    println!();
-
-    println!("Hiding in imul");
-    let res_bytes: Vec<_> = instrs_raw
-        .iter()
-        .zip(offsets.iter())
-        .map(|(i, o)| imul_hide(i, *o))
-        .collect();
-    for i in &res_bytes {
-        print!("  ");
-        for b in i {
-            print!("{:02X} ", b);
-        }
-        println!();
-    }
-    println!();
-
-    println!("Obfuscated assembly");
-    let mut decoder = Decoder::new(64, &res_bytes[0], DecoderOptions::NONE);
-    decoder.set_ip(0);
-    for instr in decoder.into_iter() {
-        println!("  {}", format_instruction(&instr, 0, &res_bytes[0]));
-    }
-    println!();
-
-    println!("Adding ADD routine");
-    let xor: &[u8] = &[
-        0x48, 0x8B, 0x0d, 0xF1, 0xFF, 0xFF, 0xFF, 0x48, 0x03, 0x0d, 0xDE, 0xFF, 0xFF, 0xFF, 0x48,
-        0x89, 0x0d, 0xD7, 0xFF, 0xFF, 0xFF, 0xEB, 0xD1
-    ];
-    let mut decoder = Decoder::new(64, &xor, DecoderOptions::NONE);
-    decoder.set_ip(0);
-    for instr in decoder.into_iter() {
-        println!("  {}", format_instruction(&instr, 0, &xor));
+    println!("Packed assembly:");
+    let mut decoder = Decoder::new(64, &code, DecoderOptions::NONE);
+    decoder.set_ip(cave as u64);
+    for i in decoder.iter() {
+        //println!("{:?}", i);
+        println!("  {}", format_instruction(&i, cave as usize, &code, true));
     }
     println!();
 
@@ -309,13 +239,9 @@ fn main() {
     let encoded = BlockEncoder::encode(64, block, BlockEncoderOptions::NONE).unwrap();
     let jump = encoded.code_buffer;
 
-    let mut code = Vec::new();
-    code.extend_from_slice(&res_bytes[0]);
-    code.extend_from_slice(xor);
-
     let mut out = bytes.clone();
 
-    out[sub.start..sub.start + jump.len()].copy_from_slice(&jump);
+    out[sub.start+4..sub.start+4 + jump.len()].copy_from_slice(&jump);
     out[cave..cave + code.len()].copy_from_slice(&code);
 
     fs::write(out_file, out).expect("Failed to write output");
