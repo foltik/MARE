@@ -104,7 +104,7 @@ fn read_subroutines(dwarf: &Dwarf) -> Vec<Sub> {
 
 fn decode_subroutine(sub: &Sub, bytes: &[u8]) -> Vec<I> {
     let bytes = &bytes[sub.start..sub.end];
-    let mut decoder = Decoder::new(64, bytes, DecoderOptions::NONE);
+    let mut decoder = Decoder::new(32, bytes, DecoderOptions::NONE);
     decoder.set_ip(sub.start as u64);
     decoder.into_iter().collect()
 }
@@ -193,30 +193,35 @@ fn main() {
         ins_mod.push(I::with_declare_byte(&[0xEB, 0x0A]));
         ins_mod.push(I::with_declare_byte(&[0x69, 0x84]));
         ins_mod.push(I::with_declare_byte(&[0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90])); // key
-        ins_mod.push(I::with_reg(C::Push_r64, R::RCX));
+        ins_mod.push(I::with_reg(C::Push_r32, R::ECX));
         ins_mod.push(I::with_declare_byte(&[0x48, 0x8B, 0x0D, 0xF0, 0xFF, 0xFF, 0xFF]));
         ins_mod.push(I::with_declare_byte(&[0x48, 0x03, 0x0D, 0xDD, 0xFF, 0xFF, 0xFF]));
         ins_mod.push(I::with_declare_byte(&[0x48, 0x89, 0x0D, 0x05, 0x00, 0x00, 0x00]));
-        ins_mod.push(I::with_reg(C::Pop_r64, R::RCX));
+        ins_mod.push(I::with_reg(C::Pop_r32, R::ECX));
     }
     ins_mod.push(I::with_declare_byte(&[0xEB, 0x02]));
     ins_mod.push(I::with_declare_byte(&[0x69, 0x84]));
-    ins_mod.push(I::with_branch(C::Jmp_rel32_64, (sub.end - 2) as u64));
+    ins_mod.push(I::with_branch(C::Jmp_rel32_32, (sub.end - 2) as u64));
     ins_mod.push(I::with_declare_byte(&[0x90, 0x90, 0x90]));
 
     let block = InstructionBlock::new(&ins_mod, cave_offset);
-    let encoded = BlockEncoder::encode(64, block, BlockEncoderOptions::NONE).unwrap();
+    let encoded = BlockEncoder::encode(32, block, BlockEncoderOptions::NONE).unwrap();
     let mut code = encoded.code_buffer.clone();
 
     println!("Patching offsets");
     for k in 0..len {
-        let i = &code[47*k+4..47*k+12];
-        let j = &code[47*k+51..47*k+59];
+        // 47 = distance between starting jumps [0xEB, 0x02]
+        // +4 = distance from [0xEB 0x02] to real instruction
+        // +51 = 47 + 4 = distance from [0xEB 0x02] to next instruction
+
+        let i = &code[47*k+4..47*k+4+8];
+        let j = &code[47*k+51..47*k+51+8];
 
         let iu = Cursor::new(i).read_u64::<NativeEndian>().unwrap();
         let ju = Cursor::new(j).read_u64::<NativeEndian>().unwrap();
 
-        let o = &mut code[47*k+16..47*k+24];
+        // +16 = distance from starting jump [0xEB, 0x02] to encoded next instruction offset
+        let o = &mut code[47*k+16..47*k+16+8];
         Cursor::new(o).write_u64::<NativeEndian>(ju.wrapping_sub(iu)).unwrap();
 
         println!("{}: {:016X} -> {:016X} (+{:016X})", k, iu, ju, ju.wrapping_sub(iu));
@@ -224,7 +229,7 @@ fn main() {
     println!();
 
     println!("Packed assembly:");
-    let mut decoder = Decoder::new(64, &code, DecoderOptions::NONE);
+    let mut decoder = Decoder::new(32, &code, DecoderOptions::NONE);
     decoder.set_ip(cave as u64);
     for i in decoder.iter() {
         //println!("{:?}", i);
@@ -233,10 +238,10 @@ fn main() {
     println!();
 
     let mut is = Vec::new();
-    is.push(I::with_branch(C::Jmp_rel32_64, cave_offset));
+    is.push(I::with_branch(C::Jmp_rel32_32, cave_offset));
     let target_ip = sub.start as u64;
     let block = InstructionBlock::new(&is, target_ip);
-    let encoded = BlockEncoder::encode(64, block, BlockEncoderOptions::NONE).unwrap();
+    let encoded = BlockEncoder::encode(32, block, BlockEncoderOptions::NONE).unwrap();
     let jump = encoded.code_buffer;
 
     let mut out = bytes.clone();
