@@ -1,7 +1,7 @@
 use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 use iced_x86::{
     BlockEncoder, BlockEncoderOptions, Code as C, Decoder, DecoderOptions, Formatter,
-    Instruction as I, InstructionBlock, IntelFormatter, Register as R,
+    Instruction as I, InstructionBlock, IntelFormatter,
 };
 use std::borrow::Cow;
 use std::fs;
@@ -118,7 +118,11 @@ fn format_instruction(i: &I, start: usize, bytes: &[u8]) -> String {
     let mut formatter = IntelFormatter::new();
     let mut out = String::new();
 
-    out.push_str(&format!("{:08x} <+{:04x}> ", i.ip(), i.ip() as usize - start));
+    out.push_str(&format!(
+        "{:08x} <+{:04x}> ",
+        i.ip(),
+        i.ip() as usize - start
+    ));
     let bytes = i_bytes(i, bytes);
     for b in bytes {
         out.push_str(&format!("{:02x} ", b));
@@ -135,9 +139,21 @@ fn format_instruction(i: &I, start: usize, bytes: &[u8]) -> String {
     out
 }
 
-fn nop_pad(i: &I, bytes: &[u8], len: usize) -> Vec<u8> {
+fn nop_pad(i: &I, bytes: &[u8], len: usize, offset: u32) -> Vec<u8> {
+    let mut v = Vec::new();
     let bytes = i_bytes(i, bytes);
-    let mut v = bytes.to_vec();
+
+    if bytes[0] == 0xE8 || bytes[0] == 0xE9 {
+        let mut rd = Cursor::new(&bytes[1..]);
+        let o = rd.read_u32::<NativeEndian>().unwrap();
+        let fixed = o - offset - 0xFFB;
+        println!("Jump Offset: {} -> {} (-{})", o as i32, fixed as i32, offset);
+        v.push(bytes[0]);
+        v.write_u32::<NativeEndian>(fixed).unwrap();
+    } else {
+        v.extend_from_slice(bytes);
+    }
+
     if v.len() < len {
         for _ in 0..(len - v.len()) {
             v.push(0x90);
@@ -218,7 +234,8 @@ fn main() {
     println!();
 
     println!("Padding instructions to 8 bytes with NOPs");
-    let instrs_raw: Vec<_> = instrs.iter().map(|i| nop_pad(i, &bytes, 8)).collect();
+    let mut instrs_raw: Vec<_> = instrs.iter().map(|i| nop_pad(i, &bytes, 8, (cave as i64 - sub.start as i64) as u32)).collect();
+    instrs_raw.push(vec![0xE9, 0x02, 0x00, 0x00, 0x00, 0x90, 0x90, 0x90]);
     for i in &instrs_raw {
         print!("  ");
         for b in i {
@@ -234,7 +251,7 @@ fn main() {
         .map(|v| Cursor::new(v).read_u64::<NativeEndian>().unwrap())
         .collect();
     for u in &instrs_u64 {
-        println!("  0x{:16X}", u);
+        println!("  0x{:016X}", u);
     }
     println!();
 
@@ -270,28 +287,36 @@ fn main() {
     decoder.set_ip(0);
     for instr in decoder.into_iter() {
         println!("  {}", format_instruction(&instr, 0, &res_bytes[0]));
-    };
+    }
     println!();
 
-    /* BELOW HERE IS JUST ME MESSING AROUND */
-    /* It patches the function to exec some shellz */
+    println!("Adding ADD routine");
+    let xor: &[u8] = &[
+        0x48, 0x8B, 0x0d, 0xF1, 0xFF, 0xFF, 0xFF, 0x48, 0x03, 0x0d, 0xDE, 0xFF, 0xFF, 0xFF, 0x48,
+        0x89, 0x0d, 0xD7, 0xFF, 0xFF, 0xFF, 0xEB, 0xD1
+    ];
+    let mut decoder = Decoder::new(64, &xor, DecoderOptions::NONE);
+    decoder.set_ip(0);
+    for instr in decoder.into_iter() {
+        println!("  {}", format_instruction(&instr, 0, &xor));
+    }
+    println!();
 
     let mut is = Vec::new();
     is.push(I::with_branch(C::Jmp_rel32_64, cave_offset));
-
-    let shell: &[u8] = &[
-        0x48, 0x31, 0xc9, 0x48, 0xf7, 0xe1, 0x04, 0x3b, 0x48, 0xbb, 0x2f, 0x62, 0x69, 0x6e, 0x2f,
-        0x2f, 0x73, 0x68, 0x52, 0x53, 0x54, 0x5f, 0x52, 0x57, 0x54, 0x5e, 0x0f, 0x05,
-    ];
-
     let target_ip = sub.start as u64;
     let block = InstructionBlock::new(&is, target_ip);
     let encoded = BlockEncoder::encode(64, block, BlockEncoderOptions::NONE).unwrap();
-    let code_bytes = encoded.code_buffer;
+    let jump = encoded.code_buffer;
+
+    let mut code = Vec::new();
+    code.extend_from_slice(&res_bytes[0]);
+    code.extend_from_slice(xor);
 
     let mut out = bytes.clone();
-    out[sub.start..sub.start + code_bytes.len()].copy_from_slice(&code_bytes);
-    out[cave..cave + shell.len()].copy_from_slice(shell);
+
+    out[sub.start..sub.start + jump.len()].copy_from_slice(&jump);
+    out[cave..cave + code.len()].copy_from_slice(&code);
 
     fs::write(out_file, out).expect("Failed to write output");
 }
