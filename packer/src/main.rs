@@ -193,11 +193,22 @@ fn main() {
         ins_mod.push(I::with_declare_byte(&[0xEB, 0x0A]));
         ins_mod.push(I::with_declare_byte(&[0x69, 0x84]));
         ins_mod.push(I::with_declare_byte(&[0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90])); // key
+        ins_mod.push(I::with_reg(C::Push_r32, R::EAX));
+        ins_mod.push(I::with_reg(C::Push_r32, R::EBX));
         ins_mod.push(I::with_reg(C::Push_r32, R::ECX));
-        ins_mod.push(I::with_declare_byte(&[0x48, 0x8B, 0x0D, 0xF0, 0xFF, 0xFF, 0xFF]));
-        ins_mod.push(I::with_declare_byte(&[0x48, 0x03, 0x0D, 0xDD, 0xFF, 0xFF, 0xFF]));
-        ins_mod.push(I::with_declare_byte(&[0x48, 0x89, 0x0D, 0x05, 0x00, 0x00, 0x00]));
+        ins_mod.push(I::with_reg(C::Push_r32, R::EDX));
+        ins_mod.push(I::with_declare_byte(&[0x8B, 0x15, 0xE8, 0xFF, 0xFF, 0xFF]));
+        ins_mod.push(I::with_declare_byte(&[0xA1, 0xE6, 0xFF, 0xFF, 0xFF,]));
+        ins_mod.push(I::with_declare_byte(&[0x8B, 0x0D, 0xE9, 0xFF, 0xFF, 0xFF]));
+        ins_mod.push(I::with_declare_byte(&[0x8B, 0x1D, 0xE7, 0xFF, 0xFF, 0xFF]));
+        ins_mod.push(I::with_declare_byte(&[0x01, 0xD8]));
+        ins_mod.push(I::with_declare_byte(&[0x11, 0xCA]));
+        ins_mod.push(I::with_declare_byte(&[0x8B, 0x15, 0x13, 0x00, 0x00, 0x00]));
+        ins_mod.push(I::with_declare_byte(&[0xA1, 0x11, 0x00, 0x00, 0x00]));
+        ins_mod.push(I::with_reg(C::Pop_r32, R::EAX));
+        ins_mod.push(I::with_reg(C::Pop_r32, R::EBX));
         ins_mod.push(I::with_reg(C::Pop_r32, R::ECX));
+        ins_mod.push(I::with_reg(C::Pop_r32, R::EDX));
     }
     ins_mod.push(I::with_declare_byte(&[0xEB, 0x02]));
     ins_mod.push(I::with_declare_byte(&[0x69, 0x84]));
@@ -210,18 +221,23 @@ fn main() {
 
     println!("Patching offsets");
     for k in 0..len {
-        // 47 = distance between starting jumps [0xEB, 0x02]
-        // +4 = distance from [0xEB 0x02] to real instruction
-        // +51 = 47 + 4 = distance from [0xEB 0x02] to next instruction
+        // d1: 47 = distance between starting jumps [0xEB, 0x02]
+        // e2: +4 = distance from [0xEB 0x02] to real instruction
+        // d3: +51 = 47 + 4 = distance from [0xEB 0x02] to next instruction
 
-        let i = &code[47*k+4..47*k+4+8];
-        let j = &code[47*k+51..47*k+51+8];
+        let d1 = 70;
+        let e2 = 4;
+        let d3 = 74;
+
+        let i = &code[d1*k+e2..d1*k+e2+8];
+        let j = &code[d1*k+d3..d1*k+d3+8];
 
         let iu = Cursor::new(i).read_u64::<NativeEndian>().unwrap();
         let ju = Cursor::new(j).read_u64::<NativeEndian>().unwrap();
 
         // +16 = distance from starting jump [0xEB, 0x02] to encoded next instruction offset
-        let o = &mut code[47*k+16..47*k+16+8];
+        let d4 = 16;
+        let o = &mut code[d1*k+d4..d1*k+d4+8];
         Cursor::new(o).write_u64::<NativeEndian>(ju.wrapping_sub(iu)).unwrap();
 
         println!("{}: {:016X} -> {:016X} (+{:016X})", k, iu, ju, ju.wrapping_sub(iu));

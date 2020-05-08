@@ -1,10 +1,10 @@
 all: patch shell xor target
 
 patch: patch.cpp
-	c++ patch.cpp -o patch -O0
+	c++  -fno-stack-protector -z execstack patch.cpp -o patch -O0 -g3 
 
 shell: shell.cpp
-	c++ shell.cpp -o shell
+	c++ shell.cpp -o shell -g3
 
 xor: xor.cpp
 	c++ xor.cpp -o xor

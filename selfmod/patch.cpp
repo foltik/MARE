@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include <stdio.h>
 #include <sys/mman.h>
 
 int test() {
@@ -6,8 +7,10 @@ int test() {
 }
 
 int main() {
-    mprotect((void*)((unsigned long)test - ((unsigned long)test % getpagesize())),
+    int r = mprotect((void*)((unsigned long)test - ((unsigned long)test % getpagesize())),
              getpagesize(), PROT_READ | PROT_WRITE | PROT_EXEC);
+    if(r)
+	    printf("Mprotect failed\n");
     *((char*)test + 5) = 0;
     return test();
 }
